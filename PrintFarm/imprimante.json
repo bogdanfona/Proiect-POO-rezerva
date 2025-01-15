@@ -1,1 +1,24 @@
-[]
+[
+    {
+      "TipImprimanta": "ImprimantaRasina",
+      "Nume": "ImprimantaRasina1",
+      "EsteInUz": false,
+      "CapacitateRasina": 500.0,
+      "RasinaCurenta": 300.0
+    },
+    {
+      "TipImprimanta": "ImprimantaFilament",
+      "Nume": "ImprimantaFilament1",
+      "EsteInUz": false,
+      "CuloareFilament": "Rosu",
+      "CantitateFilament": 1000.0
+    },
+    {
+      "TipImprimanta": "ImprimantaFilament",
+      "Nume": "ImprimantaFilament2",
+      "EsteInUz": false,
+      "CuloareFilament": "Albastru",
+      "CantitateFilament": 800.0
+    }
+  ]
+  
