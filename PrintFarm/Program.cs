@@ -363,7 +363,7 @@ namespace PrintFarm
         }
     }
 
-    public class ServiciuPersistenta
+public class ServiciuPersistenta
     {
         private const string FisierImprimante = "imprimante.json";
         private const string FisierComenzi = "comenzi.json";
@@ -371,18 +371,90 @@ namespace PrintFarm
 
         public static (List<Imprimanta>, List<Comanda>, StocFilament) IncarcaDate()
         {
-            var imprimante = File.Exists(FisierImprimante) ? JsonConvert.DeserializeObject<List<Imprimanta>>(File.ReadAllText(FisierImprimante)) : new List<Imprimanta>();
-            var comenzi = File.Exists(FisierComenzi) ? JsonConvert.DeserializeObject<List<Comanda>>(File.ReadAllText(FisierComenzi)) : new List<Comanda>();
-            var stocFilament = File.Exists(FisierStocFilament) ? JsonConvert.DeserializeObject<StocFilament>(File.ReadAllText(FisierStocFilament)) : new StocFilament();
+            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto };
+            settings.Converters.Add(new ImprimantaConverter());
+
+            var imprimante = File.Exists(FisierImprimante)
+                ? JsonConvert.DeserializeObject<List<Imprimanta>>(File.ReadAllText(FisierImprimante), settings)
+                : new List<Imprimanta>();
+
+            var comenzi = File.Exists(FisierComenzi)
+                ? JsonConvert.DeserializeObject<List<Comanda>>(File.ReadAllText(FisierComenzi))
+                : new List<Comanda>();
+
+            var stocFilament = File.Exists(FisierStocFilament)
+                ? JsonConvert.DeserializeObject<StocFilament>(File.ReadAllText(FisierStocFilament))
+                : new StocFilament();
 
             return (imprimante, comenzi, stocFilament);
         }
 
         public static void SalveazaDate(List<Imprimanta> imprimante, List<Comanda> comenzi, StocFilament stocFilament)
         {
-            File.WriteAllText(FisierImprimante, JsonConvert.SerializeObject(imprimante));
+            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto };
+            settings.Converters.Add(new ImprimantaConverter());
+
+            File.WriteAllText(FisierImprimante, JsonConvert.SerializeObject(imprimante, settings));
             File.WriteAllText(FisierComenzi, JsonConvert.SerializeObject(comenzi));
             File.WriteAllText(FisierStocFilament, JsonConvert.SerializeObject(stocFilament));
+        }
+    }
+
+    public class ImprimantaConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType)
+        {
+            return typeof(Imprimanta).IsAssignableFrom(objectType);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            var jsonObject = Newtonsoft.Json.Linq.JObject.Load(reader);
+            var tipImprimanta = jsonObject["TipImprimanta"]?.ToString();
+
+            Imprimanta imprimanta = tipImprimanta switch
+            {
+                "ImprimantaRasina" => new ImprimantaRasina(
+                    jsonObject["Nume"]?.ToString(),
+                    jsonObject["CapacitateRasina"]?.ToObject<double>() ?? 0
+                )
+                {
+                    RasinaCurenta = jsonObject["RasinaCurenta"]?.ToObject<double>() ?? 0
+                },
+                "ImprimantaFilament" => new ImprimantaFilament(
+                    jsonObject["Nume"]?.ToString(),
+                    jsonObject["CuloareFilament"]?.ToString(),
+                    jsonObject["CantitateFilament"]?.ToObject<double>() ?? 0
+                ),
+                _ => throw new Exception("Tip imprimanta necunoscut!")
+            };
+
+            imprimanta.EsteInUz = jsonObject["EsteInUz"]?.ToObject<bool>() ?? false;
+            return imprimanta;
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            var imprimanta = (Imprimanta)value;
+            var jsonObject = new Newtonsoft.Json.Linq.JObject
+            {
+                ["TipImprimanta"] = imprimanta is ImprimantaRasina ? "ImprimantaRasina" : "ImprimantaFilament",
+                ["Nume"] = imprimanta.Nume,
+                ["EsteInUz"] = imprimanta.EsteInUz
+            };
+
+            if (imprimanta is ImprimantaRasina imprimantaRasina)
+            {
+                jsonObject["CapacitateRasina"] = imprimantaRasina.CapacitateRasina;
+                jsonObject["RasinaCurenta"] = imprimantaRasina.RasinaCurenta;
+            }
+            else if (imprimanta is ImprimantaFilament imprimantaFilament)
+            {
+                jsonObject["CuloareFilament"] = imprimantaFilament.CuloareFilament;
+                jsonObject["CantitateFilament"] = imprimantaFilament.CantitateFilament;
+            }
+
+            jsonObject.WriteTo(writer);
         }
     }
 }
