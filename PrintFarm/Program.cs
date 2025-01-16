@@ -224,7 +224,7 @@ namespace PrintFarm
 
                     if (comanda != null && !comanda.EsteProcesata)
                     {
-                        comanda.EsteProcesata = true;
+                        comanda.EsteProcesata = false;
                         Console.WriteLine("Comanda a fost procesată.");
                     }
                     else
